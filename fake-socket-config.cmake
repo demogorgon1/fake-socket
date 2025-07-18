@@ -1,0 +1,14 @@
+find_path(FAKE_SOCKET_INCLUDE_DIR
+    NAMES fake_socket.h)
+
+find_library(FAKE_SOCKET_LIBRARY
+	NAMES fake-socket
+    HINTS ${FAKE_SOCKET_LIBRARY_ROOT})
+
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(FAKE_SOCKET REQUIRED_VARS FAKE_SOCKET_LIBRARY FAKE_SOCKET_INCLUDE_DIR)
+
+if(FAKE_SOCKET_FOUND)
+    set(FAKE_SOCKET_LIBRARIES ${FAKE_SOCKET_LIBRARY})
+    set(FAKE_SOCKET_INCLUDE_DIRS ${FAKE_SOCKET_INCLUDE_DIR})
+endif()
