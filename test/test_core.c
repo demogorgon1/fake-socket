@@ -154,7 +154,59 @@ test_2(
 	}
 
 	fs_core_destroy(core);
+}
 
+void
+test_3()
+{
+	fs_core* core = fs_core_create();
+	int error = 0;
+	uint16_t remotePort = 0;
+
+	{
+		int listenSocket1 = fs_core_create_socket(core, &error);
+		TEST_ASSERT(listenSocket1 != -1);
+		TEST_ASSERT(error == 0);
+		TEST_ASSERT(get_num_valid_sockets(core) == 1);
+		TEST_ASSERT(fs_core_bind(core, listenSocket1, 12345, &error));
+		TEST_ASSERT(error == 0);
+
+		int listenSocket2 = fs_core_create_socket(core, &error);
+		TEST_ASSERT(listenSocket2 != -1);
+		TEST_ASSERT(error == 0);
+		TEST_ASSERT(get_num_valid_sockets(core) == 2);
+		TEST_ASSERT(!fs_core_bind(core, listenSocket2, 12345, &error));
+		TEST_ASSERT(error == EADDRINUSE);
+
+		fs_core_destroy_socket(core, listenSocket1);
+
+		TEST_ASSERT(get_num_valid_sockets(core) == 1);
+		TEST_ASSERT(fs_core_bind(core, listenSocket2, 12345, &error));
+		TEST_ASSERT(error == 0);
+
+		TEST_ASSERT(fs_core_listen(core, listenSocket2, 32, &error));
+		TEST_ASSERT(error == 0);
+
+		int connectSocket = fs_core_create_socket(core, &error);
+		TEST_ASSERT(error == 0);
+		TEST_ASSERT(connectSocket != -1);
+		TEST_ASSERT(get_num_valid_sockets(core) == 2);
+		TEST_ASSERT(fs_core_connect(core, connectSocket, 12345, &error));
+		TEST_ASSERT(error == 0);
+
+		int clientSocket = fs_core_accept(core, listenSocket2, &remotePort, &error);
+		TEST_ASSERT(error == 0);
+		TEST_ASSERT(clientSocket != -1);
+		TEST_ASSERT(get_num_valid_sockets(core) == 3);
+
+		TEST_ASSERT(fs_core_is_connected_socket(core, connectSocket));
+		TEST_ASSERT(!fs_core_is_closed_socket(core, connectSocket));
+
+		TEST_ASSERT(fs_core_is_connected_socket(core, clientSocket));
+		TEST_ASSERT(!fs_core_is_closed_socket(core, clientSocket));
+	}
+
+	fs_core_destroy(core);
 }
 
 void
@@ -163,4 +215,5 @@ test_core()
 	test_1();
 	test_2(SIMPLE_CONNECTION_TEST_MODE_CLIENT_CLOSE);
 	test_2(SIMPLE_CONNECTION_TEST_MODE_SERVER_CLOSE);
+	test_3();
 }

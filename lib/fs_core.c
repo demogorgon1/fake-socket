@@ -58,7 +58,7 @@ fs_core_create_socket(
 
 	if(aCore->m_numFreeSockets > 0)
 	{
-		s = aCore->m_freeSockets[aCore->m_numFreeSockets];
+		s = aCore->m_freeSockets[aCore->m_numFreeSockets - 1];
 		aCore->m_numFreeSockets--;
 	}
 	else if(aCore->m_numSockets < FS_MAX_SOCKETS)
