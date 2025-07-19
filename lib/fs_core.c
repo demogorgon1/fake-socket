@@ -102,6 +102,15 @@ fs_core_destroy_socket(
 		entry->m_listening = FS_FALSE;
 	}
 
+	if (socketObject->m_remoteSocket != -1)
+	{
+		fs_socket_object* remoteSocket = fs_core_get_socket(aCore, socketObject->m_remoteSocket);
+		if (remoteSocket != NULL)
+		{
+			remoteSocket->m_closed = FS_TRUE;
+		}
+	}
+
 	fs_socket_object_destroy(socketObject);
 	aCore->m_sockets[aSocket] = NULL;
 
@@ -332,10 +341,9 @@ fs_core_accept(
 
 	clientSocketObject->m_remoteSocket = remoteSocket;
 	clientSocketObject->m_remotePort = remoteSocketObject->m_localPort;
-	clientSocketObject->m_localPort = listenSocketObject->m_localPort;
 
 	remoteSocketObject->m_remoteSocket = clientSocket;
-	remoteSocketObject->m_remotePort = clientSocketObject->m_localPort;
+	remoteSocketObject->m_remotePort = listenSocketObject->m_localPort;
 
 	fs_socket_object_init_stream(clientSocketObject);
 	fs_socket_object_init_stream(remoteSocketObject);

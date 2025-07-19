@@ -22,6 +22,8 @@ fs_bool
 fs_is_valid_socket(
 	int				aSocket)
 {
+	assert(fs_core_global != NULL);
+
 	fs_core_lock(fs_core_global);
 	
 	fs_bool isValid = fs_core_is_valid_socket(fs_core_global, aSocket);
@@ -35,6 +37,8 @@ fs_bool
 fs_is_closed_socket(
 	int				aSocket)
 {
+	assert(fs_core_global != NULL);
+
 	fs_core_lock(fs_core_global);
 	
 	fs_bool isClosed = fs_core_is_closed_socket(fs_core_global, aSocket);
@@ -48,6 +52,8 @@ fs_bool
 fs_is_connected_socket(
 	int				aSocket)
 {
+	assert(fs_core_global != NULL);
+
 	fs_core_lock(fs_core_global);
 
 	fs_bool isConnected = fs_core_is_connected_socket(fs_core_global, aSocket);
@@ -63,6 +69,8 @@ fs_socket(
 	int				aType,
 	int				aProtocol)
 {
+	assert(fs_core_global != NULL);
+
 	if(aDomain != AF_INET || aType != SOCK_STREAM || aProtocol != 0)
 	{
 		errno = EINVAL;
@@ -89,6 +97,8 @@ int
 fs_close(
 	int				aSocket)
 {
+	assert(fs_core_global != NULL);
+
 	fs_core_lock(fs_core_global);
 	fs_core_destroy_socket(fs_core_global, aSocket);
 	fs_core_unlock(fs_core_global);
@@ -103,6 +113,8 @@ fs_send(
 	size_t			aBufferSize,
 	int				aFlags)
 {
+	assert(fs_core_global != NULL);
+
 	(void)aFlags; // Unused
 
 	fs_core_lock(fs_core_global);
@@ -128,6 +140,8 @@ fs_recv(
 	size_t			aBufferSize,
 	int				aFlags)
 {
+	assert(fs_core_global != NULL);
+
 	(void)aFlags; // Unused
 
 	fs_core_lock(fs_core_global);
@@ -151,6 +165,8 @@ fs_listen(
 	int				aSocket,
 	int				aBacklog)
 {
+	assert(fs_core_global != NULL);
+
 	fs_core_lock(fs_core_global);
 
 	int error = 0;
@@ -175,6 +191,8 @@ fs_accept(
 	socklen_t*			aOutAddrLen,
 	int					aFlags)
 {
+	assert(fs_core_global != NULL);
+
 	(void)aFlags; // Unused
 
 	if(aOutAddr == NULL || aOutAddrLen == NULL || *aOutAddrLen < sizeof(struct sockaddr_in))
@@ -215,6 +233,8 @@ fs_bind(
 	const struct sockaddr*	aAddr,
 	socklen_t				aAddrLen)
 {
+	assert(fs_core_global != NULL);
+
 	if (aAddr == NULL || aAddrLen != sizeof(struct sockaddr_in))
 	{
 		errno = EINVAL;
@@ -253,6 +273,8 @@ fs_connect(
 	const struct sockaddr*	aAddr,
 	socklen_t				aAddrLen)
 {
+	assert(fs_core_global != NULL);
+
 	if (aAddr == NULL || aAddrLen != sizeof(struct sockaddr_in))
 	{
 		errno = EINVAL;

@@ -1,15 +1,18 @@
 #include <fs/fake_socket.h>
 
+#include "../lib/fs_core.h"
+
 #include "test.h"
 
-#define NUM_SERVERS				1
-#define NUM_CLIENTS				1
+#define NUM_SERVERS				5
+#define NUM_CLIENTS				20
 #define MAX_SERVER_CLIENTS		NUM_CLIENTS
 #define MAX_PENDING_RESPONSES	10
 #define MAX_PENDING_REQUESTS	10
 
 #define MESSAGE_REQUEST_START	1
 #define MESSAGE_REQUEST_END		0
+#define MAX_MESSAGE_SIZE		3000
 
 typedef enum _message_parser_state
 {
@@ -49,6 +52,7 @@ typedef struct _client
 	size_t					m_nextPendingRequest;
 	uint8_t					m_recvBuffer[sizeof(uint32_t)];
 	size_t					m_recvBufferBytes;
+	size_t					m_remainingRoundsBeforeDisconnect;
 } client;	
 
 void
@@ -157,8 +161,10 @@ server_update(
 
 		if(!closed)
 		{
-			uint8_t recvBuffer[256];
-			size_t recvBytes = fs_recv(c->m_socket, recvBuffer, sizeof(recvBuffer), 0);
+			uint8_t recvBuffer[32768];
+			size_t readSize = (size_t)(rand() % 32767) + 1;
+
+			size_t recvBytes = fs_recv(c->m_socket, recvBuffer, readSize, 0);
 			if(recvBytes == 0 || (recvBytes == SIZE_MAX && errno != EAGAIN))
 			{
 				closed = FS_TRUE;
@@ -222,8 +228,11 @@ client_destroy(
 
 void
 client_update(
-	client*			aClient)
+	client*			aClient,
+	size_t			aClientNumber)
 {
+	(void)aClientNumber;
+
 	if(aClient->m_socket == -1)
 	{
 		uint16_t serverPort = aClient->m_availableServerPorts[rand() % NUM_SERVERS];
@@ -241,6 +250,8 @@ client_update(
 			int result = fs_connect(aClient->m_socket, (const struct sockaddr*)&sin, sizeof(sin));
 			TEST_ASSERT(result != -1);
 		}
+
+		aClient->m_remainingRoundsBeforeDisconnect = 1 + (size_t)(rand() % 40);
 	}
 	else if(fs_is_closed_socket(aClient->m_socket))
 	{
@@ -254,28 +265,49 @@ client_update(
 
 		if(aClient->m_numPendingRequests == 0)
 		{
-			for(size_t i = 0; i < 1; i++)
+			if(aClient->m_remainingRoundsBeforeDisconnect == 0)
 			{
-				uint8_t message[4];
-				message[0] = MESSAGE_REQUEST_START;
-				message[1] = 1;
-				message[2] = 2;
-				message[3] = MESSAGE_REQUEST_END;
+				closed = FS_TRUE;
+			}
+			else
+			{
+				aClient->m_remainingRoundsBeforeDisconnect--;
 
-				aClient->m_pendingRequests[aClient->m_numPendingRequests++] = 3;
+				size_t requestsToSend = (size_t)(rand() % 10) + 1;
 
-				size_t sentBytes = fs_send(aClient->m_socket, message, sizeof(message), 0);
-				if(sentBytes == SIZE_MAX && errno != EAGAIN)
+				for(size_t i = 0; i < requestsToSend; i++)
 				{
-					closed = FS_TRUE;
-					break;
+					size_t count = (rand() % (MAX_MESSAGE_SIZE - 1)) + 1;
+
+					uint32_t sum = 0;
+
+					uint8_t message[MAX_MESSAGE_SIZE + 2];
+					message[0] = MESSAGE_REQUEST_START;
+
+					for(size_t j = 0; j < count; j++)
+					{
+						uint8_t v = 1 + (uint8_t)(rand() % 100);
+						message[1 + j] = v;
+						sum += (uint32_t)v;
+					}
+
+					message[count + 1] = MESSAGE_REQUEST_END;
+
+					aClient->m_pendingRequests[aClient->m_numPendingRequests++] = sum;
+
+					size_t sentBytes = fs_send(aClient->m_socket, message, count + 2, 0);
+					if(sentBytes == SIZE_MAX && errno != EAGAIN)
+					{
+						closed = FS_TRUE;
+						break;
+					}
+
+					TEST_ASSERT(sentBytes == count + 2);
 				}
 
-				TEST_ASSERT(sentBytes == sizeof(message));
+				aClient->m_recvBufferBytes = 0;
+				aClient->m_nextPendingRequest = 0;
 			}
-
-			aClient->m_recvBufferBytes = 0;
-			aClient->m_nextPendingRequest = 0;
 		}
 		else
 		{
@@ -283,7 +315,7 @@ client_update(
 
 			uint8_t recvValue;
 			size_t recvBytes = fs_recv(aClient->m_socket, &recvValue, 1, 0);
-			if(recvBytes == 0 || (recvBytes == SIZE_MAX && recvBytes != EAGAIN))
+			if(recvBytes == 0 || (recvBytes == SIZE_MAX && errno != EAGAIN))
 			{
 				closed = FS_TRUE;
 			}
@@ -303,6 +335,8 @@ client_update(
 
 					if(aClient->m_nextPendingRequest == aClient->m_numPendingRequests)
 						aClient->m_numPendingRequests = 0;
+
+					aClient->m_recvBufferBytes = 0;
 				}
 			}
 		}
@@ -336,15 +370,21 @@ test_server()
 	for (size_t i = 0; i < NUM_CLIENTS; i++)
 		clients[i] = client_create(availableServerPorts);
 
+	time_t startTime = time(NULL);
+
 	for(;;)
 	{
+		time_t currentTime = time(NULL);
+		
+		uint32_t secondsPassed = currentTime > startTime ? (uint32_t)(currentTime - startTime) : 0;
+		if(secondsPassed > 6000)
+			break;
+
 		for (size_t i = 0; i < NUM_SERVERS; i++)
 			server_update(servers[i]);
 
 		for (size_t i = 0; i < NUM_CLIENTS; i++)
-			client_update(clients[i]);
-
-		Sleep(1);
+			client_update(clients[i], i);		
 	}
 
 	for (size_t i = 0; i < NUM_SERVERS; i++)

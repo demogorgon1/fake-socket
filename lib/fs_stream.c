@@ -107,6 +107,7 @@ fs_stream_read(
 			if(aStream->m_head == NULL)
 			{
 				aStream->m_tail = NULL;
+				aStream->m_tailWriteOffset = 0;
 			}
 		}
 	}

@@ -13,7 +13,7 @@ typedef struct _fs_core
 	uint32_t			m_numSockets;
 	int					m_freeSockets[FS_MAX_SOCKETS];
 	uint32_t			m_numFreeSockets;	
-	fs_port_table*	m_portTable;			
+	fs_port_table*		m_portTable;			
 	fs_mutex			m_lock;
 } fs_core;
 
