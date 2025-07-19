@@ -219,7 +219,13 @@ fs_accept(
 		struct sockaddr_in* sin = (struct sockaddr_in*)aOutAddr;
 		memset(sin, 0, sizeof(struct sockaddr_in));
 		sin->sin_family = AF_INET;
-		sin->sin_addr.S_un.S_addr = INADDR_LOOPBACK;
+
+		#if defined(WIN32)
+			sin->sin_addr.S_un.S_addr = INADDR_LOOPBACK;
+		#else
+			sin->sin_addr.s_addr = INADDR_LOOPBACK;
+		#endif
+
 		sin->sin_port = htons(remotePort);
 		*aOutAddrLen = sizeof(struct sockaddr_in);
 	}
