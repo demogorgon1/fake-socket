@@ -1,6 +1,6 @@
 #include "fs_core.h"
 
-fs_core*		fs_core_global;
+fs_core*		fs_core_global = NULL;
 
 void
 fs_init()

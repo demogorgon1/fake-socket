@@ -2,6 +2,7 @@
 
 void test_stream();
 void test_core();
+void test_server();
 
 int
 main(
@@ -10,6 +11,7 @@ main(
 {
 	test_stream();
 	test_core();
+	test_server();
 
 	return EXIT_SUCCESS;
 }
