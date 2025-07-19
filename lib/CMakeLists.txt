@@ -15,8 +15,6 @@ else()
 		-pedantic 
 		-Werror 
 		-Wno-unused-function 	# I want unused functions for debugging purposes
-		-Wno-reorder			# I want to be able to initialize class members in any order
-		-Wno-class-memaccess	# I want to be able to memset() things that I know are safe to memset()
 	)	
 endif()
 	

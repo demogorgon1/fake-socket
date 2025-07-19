@@ -5,6 +5,9 @@
 	#include <winsock2.h>
 	#include <ws2tcpip.h>
 	#include <windows.h>	
+#else
+	#include <sys/socket.h>
+	#include <errno.h>
 #endif
 
 #include <stdlib.h>
@@ -12,6 +15,7 @@
 #include <stdint.h>
 #include <assert.h>
 #include <malloc.h>
+#include <string.h>
 
 #define FS_TRUE							1
 #define FS_FALSE						0
