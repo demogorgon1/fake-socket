@@ -9,6 +9,7 @@
 	#include <sys/socket.h>
 	#include <netinet/in.h>
 	#include <errno.h>
+	#include <pthread.h>
 #endif
 
 #include <stdlib.h>
