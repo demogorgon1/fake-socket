@@ -3,26 +3,22 @@
 
 #include <fs/fs_base.h>
 
-#include "fs_listen_table.h"
+#include "fs_port_table.h"
 #include "fs_mutex.h"
 #include "fs_socket_object.h"
 
 typedef struct _fs_core
 {
-	uint32_t			m_magic;
 	fs_socket_object*	m_sockets[FS_MAX_SOCKETS];
 	uint32_t			m_numSockets;
 	int					m_freeSockets[FS_MAX_SOCKETS];
 	uint32_t			m_numFreeSockets;	
-	fs_listen_table*	m_listenTable;			
+	fs_port_table*	m_portTable;			
 	fs_mutex			m_lock;
 } fs_core;
 
-void				fs_core_init(
-						fs_core*				aCore);
-void				fs_core_uninit(
-						fs_core*				aCore);
-fs_bool				fs_core_is_init(
+fs_core*			fs_core_create();
+void				fs_core_destroy(
 						fs_core*				aCore);
 void				fs_core_lock(
 						fs_core*				aCore);
@@ -35,6 +31,12 @@ void				fs_core_destroy_socket(
 						fs_core*				aCore,
 						int						aSocket);
 fs_bool				fs_core_is_valid_socket(
+						fs_core*				aCore,
+						int						aSocket);
+fs_bool				fs_core_is_closed_socket(
+						fs_core*				aCore,
+						int						aSocket);
+fs_bool				fs_core_is_connected_socket(
 						fs_core*				aCore,
 						int						aSocket);
 fs_socket_object*	fs_core_get_socket(

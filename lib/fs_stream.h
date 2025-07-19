@@ -3,8 +3,6 @@
 
 #include <fs/fs_base.h>
 
-#define FS_STREAM_BUFFER_SIZE	2048
-
 typedef struct _fs_stream_buffer
 {
 	uint8_t						m_data[FS_STREAM_BUFFER_SIZE];
@@ -32,6 +30,6 @@ size_t				fs_stream_read(
 						void*			aBuffer,
 						size_t			aBufferSize);
 void				fs_stream_clear(
-						fs_stream* aStream);
+						fs_stream*      aStream);
 
 #endif

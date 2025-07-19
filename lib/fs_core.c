@@ -1,46 +1,36 @@
 #include "fs_core.h"
 
-#define FS_CORE_MAGIC 0xF5C012E
-
-void				
-fs_core_init(
-	fs_core*				aCore)
+fs_core*
+fs_core_create()
 {
-	assert(!fs_core_is_init(aCore));
-	memset(aCore, 0, sizeof(fs_core));
+	fs_core* t = FS_NEW(fs_core);
 
-	aCore->m_numSockets = 1; // Socket 0 isn't used
-	aCore->m_listenTable = fs_listen_table_create();
+	t->m_numSockets = 1; // Socket 0 isn't used
+	t->m_portTable = fs_port_table_create();
 
-	fs_mutex_init(&aCore->m_lock);
+	fs_mutex_init(&t->m_lock);
 
-	aCore->m_magic = FS_CORE_MAGIC;
+	return t;
 }
 
 void				
-fs_core_uninit(
+fs_core_destroy(
 	fs_core*				aCore)
 {
-	assert(fs_core_is_init(aCore));
-
-	for(uint32_t i = 0; i < aCore->m_numSockets; i++)
+	if(aCore != NULL)
 	{
-		if(aCore->m_sockets[i] != NULL)
-			fs_socket_object_destroy(aCore->m_sockets[i]);
+		for (uint32_t i = 0; i < aCore->m_numSockets; i++)
+		{
+			if (aCore->m_sockets[i] != NULL)
+				fs_socket_object_destroy(aCore->m_sockets[i]);
+		}
+
+		fs_port_table_destroy(aCore->m_portTable);
+
+		fs_mutex_uninit(&aCore->m_lock);
+
+		free(aCore);
 	}
-
-	fs_listen_table_destroy(aCore->m_listenTable);
-
-	fs_mutex_uninit(&aCore->m_lock);
-
-	aCore->m_magic = 0;
-}
-
-fs_bool				
-fs_core_is_init(
-	fs_core*				aCore)
-{
-	return aCore->m_magic == FS_CORE_MAGIC;
 }
 
 void				
@@ -98,9 +88,21 @@ fs_core_destroy_socket(
 {
 	assert(aSocket > 0);
 	assert((uint32_t)aSocket < aCore->m_numSockets);
-	assert(aCore->m_sockets[aSocket] != NULL);
 
-	fs_socket_object_destroy(aCore->m_sockets[aSocket]);
+	fs_socket_object* socketObject = aCore->m_sockets[aSocket];
+	assert(socketObject != NULL);
+
+	if(socketObject->m_localPort != 0)
+	{
+		fs_port_table_entry* entry = fs_port_table_get_entry(aCore->m_portTable, socketObject->m_localPort);
+		
+		assert(entry->m_socket == aSocket);
+
+		entry->m_socket = 0;
+		entry->m_listening = FS_FALSE;
+	}
+
+	fs_socket_object_destroy(socketObject);
 	aCore->m_sockets[aSocket] = NULL;
 
 	assert(aCore->m_numSockets > 0);
@@ -123,6 +125,30 @@ fs_core_is_valid_socket(
 	int						aSocket)
 {
 	return fs_core_get_socket(aCore, aSocket) != NULL;
+}
+
+fs_bool
+fs_core_is_closed_socket(
+	fs_core*				aCore,
+	int						aSocket)
+{
+	fs_socket_object* socketObject = fs_core_get_socket(aCore, aSocket);
+	if (socketObject == NULL)
+		return FS_TRUE;
+
+	return socketObject->m_closed;
+}
+
+fs_bool
+fs_core_is_connected_socket(
+	fs_core* aCore,
+	int						aSocket)
+{
+	fs_socket_object* socketObject = fs_core_get_socket(aCore, aSocket);
+	if (socketObject == NULL)
+		return FS_FALSE;
+
+	return socketObject->m_remoteSocket != -1 && !socketObject->m_closed;
 }
 
 fs_socket_object* 
@@ -155,7 +181,17 @@ fs_core_bind(
 		return FS_FALSE;
 	}
 
+	fs_port_table_entry* entry = fs_port_table_get_entry(aCore->m_portTable, aPort);
+
+	if(entry->m_socket != 0)
+	{
+		*aOutError = EADDRINUSE;
+		return FS_FALSE;
+	}
+
 	socketObject->m_localPort = aPort;
+
+	entry->m_socket = aSocket;
 
 	return FS_TRUE;
 }
@@ -184,15 +220,20 @@ fs_core_connect(
 
 	socketObject->m_remotePort = aPort;
 
-	int listenSocket = fs_listen_table_get(aCore->m_listenTable, aPort);
-	
+	int listenSocket = fs_port_table_get_listening_socket(aCore->m_portTable, aPort);
+
 	if (listenSocket == -1)
 	{
 		socketObject->m_closed = FS_TRUE;		
 	}
 	else
 	{
-		socketObject->m_localPort = 10000; // FIXME: ephemeral port
+		socketObject->m_localPort = fs_port_table_next_ephemeral(aCore->m_portTable);
+
+		fs_port_table_entry* entry = fs_port_table_get_entry(aCore->m_portTable, socketObject->m_localPort);
+		assert(entry->m_socket == 0);
+		assert(!entry->m_listening);
+		entry->m_socket = aSocket;
 
 		fs_socket_object* listenSocketObject = fs_core_get_socket(aCore, listenSocket);
 		assert(listenSocketObject != NULL);
@@ -201,6 +242,8 @@ fs_core_connect(
 		if(!fs_accept_backlog_add(listenSocketObject->m_acceptBacklog, aSocket))
 		{
 			*aOutError = ECONNREFUSED;
+			entry->m_socket = 0;
+
 			return FS_FALSE;
 		}
 	}
@@ -230,15 +273,17 @@ fs_core_listen(
 		return FS_FALSE;
 	}
 
-	if (fs_listen_table_get(aCore->m_listenTable, socketObject->m_localPort) != -1)
+	fs_port_table_entry* entry = fs_port_table_get_entry(aCore->m_portTable, socketObject->m_localPort);
+
+	if (entry->m_socket != aSocket)
 	{
-		*aOutError = EADDRINUSE;
+		*aOutError = EINVAL;
 		return FS_FALSE;
 	}
 
 	fs_socket_object_init_accept_backlog(socketObject, aBacklog < FS_MAX_BACKLOG ? aBacklog : FS_MAX_BACKLOG);
 	
-	aCore->m_listenTable->m_sockets[socketObject->m_localPort] = aSocket;
+	entry->m_listening = FS_TRUE;
 
 	return FS_TRUE;
 }
@@ -396,6 +441,16 @@ fs_core_close(
 {
 	fs_socket_object* socketObject = fs_core_get_socket(aCore, aSocket);
 	if (socketObject != NULL)
+	{
 		socketObject->m_closed = FS_TRUE;
-}
 
+		if(socketObject->m_remoteSocket != -1)
+		{
+			fs_socket_object* remoteSocket = fs_core_get_socket(aCore, socketObject->m_remoteSocket);
+			if(remoteSocket != NULL)
+			{
+				remoteSocket->m_closed = FS_TRUE;
+			}
+		}
+	}
+}

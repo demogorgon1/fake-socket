@@ -7,6 +7,10 @@ void		fs_init();
 void		fs_uninit();
 fs_bool		fs_is_valid_socket(
 				int						aSocket);
+fs_bool		fs_is_closed_socket(
+				int						aSocket);
+fs_bool		fs_is_connected_socket(
+				int						aSocket);
 
 int			fs_socket(	
 				int						aDomain,

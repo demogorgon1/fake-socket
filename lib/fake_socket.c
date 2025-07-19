@@ -1,30 +1,60 @@
 #include "fs_core.h"
 
-fs_core		fs_core_global;
+fs_core*		fs_core_global;
 
 void
 fs_init()
 {
-	fs_core_init(&fs_core_global);
+	assert(fs_core_global == NULL);
+	
+	fs_core_global = fs_core_create();
 }
 
 void
 fs_uninit()
 {
-	fs_core_uninit(&fs_core_global);
+	assert(fs_core_global != NULL);
+
+	fs_core_destroy(fs_core_global);
 }
 
 fs_bool		
 fs_is_valid_socket(
 	int				aSocket)
 {
-	fs_core_lock(&fs_core_global);
+	fs_core_lock(fs_core_global);
 	
-	fs_bool isValid = fs_core_is_valid_socket(&fs_core_global, aSocket);
+	fs_bool isValid = fs_core_is_valid_socket(fs_core_global, aSocket);
 	
-	fs_core_unlock(&fs_core_global);
+	fs_core_unlock(fs_core_global);
 
 	return isValid;
+}
+
+fs_bool		
+fs_is_closed_socket(
+	int				aSocket)
+{
+	fs_core_lock(fs_core_global);
+	
+	fs_bool isClosed = fs_core_is_closed_socket(fs_core_global, aSocket);
+	
+	fs_core_unlock(fs_core_global);
+
+	return isClosed;
+}
+
+fs_bool
+fs_is_connected_socket(
+	int				aSocket)
+{
+	fs_core_lock(fs_core_global);
+
+	fs_bool isConnected = fs_core_is_connected_socket(fs_core_global, aSocket);
+
+	fs_core_unlock(fs_core_global);
+
+	return isConnected;
 }
 
 int			
@@ -39,10 +69,10 @@ fs_socket(
 		return -1;
 	}
 
-	fs_core_lock(&fs_core_global);
+	fs_core_lock(fs_core_global);
 
 	int error = 0;
-	int s = fs_core_create_socket(&fs_core_global, &error);
+	int s = fs_core_create_socket(fs_core_global, &error);
 
 	if(s == -1)
 	{
@@ -50,7 +80,7 @@ fs_socket(
 		errno = error;
 	}
 
-	fs_core_unlock(&fs_core_global);
+	fs_core_unlock(fs_core_global);
 
 	return s;
 }
@@ -59,9 +89,9 @@ int
 fs_close(
 	int				aSocket)
 {
-	fs_core_lock(&fs_core_global);
-	fs_core_destroy_socket(&fs_core_global, aSocket);
-	fs_core_unlock(&fs_core_global);
+	fs_core_lock(fs_core_global);
+	fs_core_destroy_socket(fs_core_global, aSocket);
+	fs_core_unlock(fs_core_global);
 
 	return 0;
 }
@@ -75,12 +105,12 @@ fs_send(
 {
 	(void)aFlags; // Unused
 
-	fs_core_lock(&fs_core_global);
+	fs_core_lock(fs_core_global);
 
 	int error = 0;
-	size_t result = fs_core_send(&fs_core_global, aSocket, aBuffer, aBufferSize, &error);
+	size_t result = fs_core_send(fs_core_global, aSocket, aBuffer, aBufferSize, &error);
 
-	fs_core_unlock(&fs_core_global);
+	fs_core_unlock(fs_core_global);
 
 	if(result == SIZE_MAX)
 	{
@@ -100,12 +130,12 @@ fs_recv(
 {
 	(void)aFlags; // Unused
 
-	fs_core_lock(&fs_core_global);
+	fs_core_lock(fs_core_global);
 
 	int error = 0;
-	size_t result = fs_core_recv(&fs_core_global, aSocket, aBuffer, aBufferSize, &error);
+	size_t result = fs_core_recv(fs_core_global, aSocket, aBuffer, aBufferSize, &error);
 
-	fs_core_unlock(&fs_core_global);
+	fs_core_unlock(fs_core_global);
 
 	if(result == SIZE_MAX)
 	{
@@ -121,12 +151,12 @@ fs_listen(
 	int				aSocket,
 	int				aBacklog)
 {
-	fs_core_lock(&fs_core_global);
+	fs_core_lock(fs_core_global);
 
 	int error = 0;
-	fs_bool ok = fs_core_listen(&fs_core_global, aSocket, (size_t)aBacklog, &error);
+	fs_bool ok = fs_core_listen(fs_core_global, aSocket, (size_t)aBacklog, &error);
 
-	fs_core_unlock(&fs_core_global);
+	fs_core_unlock(fs_core_global);
 
 	if (!ok)
 	{
@@ -153,13 +183,13 @@ fs_accept(
 		return -1;
 	}
 
-	fs_core_lock(&fs_core_global);
+	fs_core_lock(fs_core_global);
 
 	int error = 0;
 	uint16_t remotePort = 0;
-	int s = fs_core_accept(&fs_core_global, aSocket, &remotePort, &error);
+	int s = fs_core_accept(fs_core_global, aSocket, &remotePort, &error);
 
-	fs_core_unlock(&fs_core_global);
+	fs_core_unlock(fs_core_global);
 
 	if(s == -1)
 	{
@@ -200,12 +230,12 @@ fs_bind(
 
 	uint16_t remotePort = ntohs(sin->sin_port);
 
-	fs_core_lock(&fs_core_global);
+	fs_core_lock(fs_core_global);
 
 	int error = 0;
-	fs_bool ok = fs_core_bind(&fs_core_global, aSocket, remotePort, &error);
+	fs_bool ok = fs_core_bind(fs_core_global, aSocket, remotePort, &error);
 
-	fs_core_unlock(&fs_core_global);
+	fs_core_unlock(fs_core_global);
 
 	if(!ok)
 	{
@@ -238,12 +268,12 @@ fs_connect(
 
 	uint16_t remotePort = ntohs(sin->sin_port);
 
-	fs_core_lock(&fs_core_global);
+	fs_core_lock(fs_core_global);
 
 	int error = 0;
-	fs_bool ok = fs_core_connect(&fs_core_global, aSocket, remotePort, &error);
+	fs_bool ok = fs_core_connect(fs_core_global, aSocket, remotePort, &error);
 
-	fs_core_unlock(&fs_core_global);
+	fs_core_unlock(fs_core_global);
 
 	if (!ok)
 	{
