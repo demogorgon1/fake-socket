@@ -377,7 +377,7 @@ test_server()
 		time_t currentTime = time(NULL);
 		
 		uint32_t secondsPassed = currentTime > startTime ? (uint32_t)(currentTime - startTime) : 0;
-		if(secondsPassed > 6000)
+		if(secondsPassed > 6)
 			break;
 
 		for (size_t i = 0; i < NUM_SERVERS; i++)
