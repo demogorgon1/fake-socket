@@ -48,6 +48,8 @@ int			fs_connect(
 				int						aSocket,
 				const struct sockaddr*	aAddr,
 				socklen_t				aAddrLen);
+int			fs_shutdown(
+				int						aSocket);
 
 #ifdef __cplusplus
 }

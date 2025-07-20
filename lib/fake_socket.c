@@ -313,3 +313,14 @@ fs_connect(
 	return 0;
 }
 
+int			
+fs_shutdown(
+	int						aSocket)
+{
+	fs_core_lock(fs_core_global);
+	int result = fs_close(aSocket);
+	fs_core_unlock(fs_core_global);
+
+	return result;
+}
+
