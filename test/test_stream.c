@@ -1,3 +1,4 @@
+#include "../lib/fs_mem.h"
 #include "../lib/fs_stream.h"
 
 #include "test.h"

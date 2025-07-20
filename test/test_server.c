@@ -1,6 +1,7 @@
 #include <fs/fake_socket.h>
 
 #include "../lib/fs_core.h"
+#include "../lib/fs_mem.h"
 
 #include "test.h"
 
