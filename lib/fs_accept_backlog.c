@@ -54,12 +54,38 @@ fs_accept_backlog_get_next(
 	if (aAcceptBacklog->m_count == 0)
 		return -1;
 
-	assert(aAcceptBacklog->m_read < aAcceptBacklog->m_size);
+	int s = -1;
 
-	int s = aAcceptBacklog->m_remoteSockets[aAcceptBacklog->m_read];
-	aAcceptBacklog->m_read = (aAcceptBacklog->m_read + 1) % aAcceptBacklog->m_size;
+	size_t loops = 0;
+
+	while(s == -1)
+	{
+		assert(loops < aAcceptBacklog->m_size);
+		assert(aAcceptBacklog->m_read < aAcceptBacklog->m_size);
+		s = aAcceptBacklog->m_remoteSockets[aAcceptBacklog->m_read];
+		aAcceptBacklog->m_read = (aAcceptBacklog->m_read + 1) % aAcceptBacklog->m_size;
+
+		loops++;
+	}
 
 	aAcceptBacklog->m_count--;
 
 	return s;
 }
+
+void				
+fs_accept_backlog_remove(
+	fs_accept_backlog*	aAcceptBacklog,
+	int					aRemoteSocket)
+{
+	for(size_t i = 0; i < aAcceptBacklog->m_size; i++)
+	{
+		if(aAcceptBacklog->m_remoteSockets[i] == aRemoteSocket)
+		{
+			aAcceptBacklog->m_remoteSockets[i] = -1;
+			aAcceptBacklog->m_count--;
+			break;
+		}
+	}
+}
+

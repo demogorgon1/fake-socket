@@ -111,6 +111,35 @@ fs_core_destroy_socket(
 			remoteSocket->m_closed = FS_TRUE;
 		}
 	}
+	else if(socketObject->m_remotePort != 0)
+	{
+		fs_port_table_entry* entry = fs_port_table_get_entry(aCore->m_portTable, socketObject->m_remotePort);
+
+		if(entry->m_listening)
+		{
+			assert(entry->m_socket != 0);
+
+			fs_socket_object* remoteSocket = fs_core_get_socket(aCore, entry->m_socket);
+			assert(remoteSocket->m_localPort == socketObject->m_remotePort);
+			assert(remoteSocket->m_acceptBacklog != NULL);
+
+			fs_accept_backlog_remove(remoteSocket->m_acceptBacklog, aSocket);
+		}
+	}
+
+	if(socketObject->m_acceptBacklog != NULL)
+	{
+		for(;;)
+		{
+			int s = fs_accept_backlog_get_next(socketObject->m_acceptBacklog);
+			if(s == -1)
+				break;
+
+			fs_socket_object* remoteSocket = fs_core_get_socket(aCore, s);
+			if(remoteSocket != NULL)
+				remoteSocket->m_closed = FS_TRUE;
+		}
+	}
 
 	fs_socket_object_destroy(socketObject);
 	aCore->m_sockets[aSocket] = NULL;

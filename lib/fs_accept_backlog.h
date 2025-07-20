@@ -21,5 +21,8 @@ fs_bool				fs_accept_backlog_add(
 						int					aRemoteSocket);
 int					fs_accept_backlog_get_next(
 						fs_accept_backlog*	aAcceptBacklog);
+void				fs_accept_backlog_remove(
+						fs_accept_backlog*	aAcceptBacklog,
+						int					aRemoteSocket);
 
 #endif

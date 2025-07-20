@@ -210,10 +210,104 @@ test_3()
 }
 
 void
+test_4()
+{
+	fs_core* core = fs_core_create();
+	int error = 0;
+	uint16_t remotePort = 0;
+
+	{
+		int listenSocket = fs_core_create_socket(core, &error);
+		TEST_ASSERT(listenSocket != -1);
+		TEST_ASSERT(error == 0);
+		TEST_ASSERT(get_num_valid_sockets(core) == 1);
+		TEST_ASSERT(fs_core_bind(core, listenSocket, 12345, &error));
+		TEST_ASSERT(error == 0);
+
+		TEST_ASSERT(fs_core_listen(core, listenSocket, 32, &error));
+		TEST_ASSERT(error == 0);
+
+		{
+			int connectSocket = fs_core_create_socket(core, &error);
+			TEST_ASSERT(error == 0);
+			TEST_ASSERT(connectSocket != -1);
+			TEST_ASSERT(get_num_valid_sockets(core) == 2);
+			TEST_ASSERT(fs_core_connect(core, connectSocket, 12345, &error));
+			TEST_ASSERT(error == 0);
+
+			// Destroy connecting socket before it's accepted
+			fs_core_destroy_socket(core, connectSocket);
+
+			int clientSocket = fs_core_accept(core, listenSocket, &remotePort, &error);
+			TEST_ASSERT(clientSocket == -1);
+			TEST_ASSERT(error == EAGAIN);
+		}
+
+		// Try again, this time it should work
+
+		{
+			int connectSocket = fs_core_create_socket(core, &error);
+			TEST_ASSERT(error == 0);
+			TEST_ASSERT(connectSocket != -1);
+			TEST_ASSERT(fs_core_connect(core, connectSocket, 12345, &error));
+			TEST_ASSERT(error == 0);
+
+			int clientSocket = fs_core_accept(core, listenSocket, &remotePort, &error);
+			TEST_ASSERT(clientSocket != -1);
+
+			TEST_ASSERT(fs_core_is_connected_socket(core, connectSocket));
+			TEST_ASSERT(!fs_core_is_closed_socket(core, connectSocket));
+
+			TEST_ASSERT(fs_core_is_connected_socket(core, clientSocket));
+			TEST_ASSERT(!fs_core_is_closed_socket(core, clientSocket));
+		}
+	}
+
+	fs_core_destroy(core);
+}
+
+void
+test_5()
+{
+	fs_core* core = fs_core_create();
+	int error = 0;
+	uint16_t remotePort = 0;
+
+	{
+		int listenSocket = fs_core_create_socket(core, &error);
+		TEST_ASSERT(listenSocket != -1);
+		TEST_ASSERT(error == 0);
+		TEST_ASSERT(get_num_valid_sockets(core) == 1);
+		TEST_ASSERT(fs_core_bind(core, listenSocket, 12345, &error));
+		TEST_ASSERT(error == 0);
+
+		TEST_ASSERT(fs_core_listen(core, listenSocket, 32, &error));
+		TEST_ASSERT(error == 0);
+
+		int connectSocket = fs_core_create_socket(core, &error);
+		TEST_ASSERT(error == 0);
+		TEST_ASSERT(connectSocket != -1);
+		TEST_ASSERT(get_num_valid_sockets(core) == 2);
+		TEST_ASSERT(fs_core_connect(core, connectSocket, 12345, &error));
+		TEST_ASSERT(error == 0);
+
+		// Destroy listening socket before connection is accepted
+		fs_core_destroy_socket(core, listenSocket);
+
+		TEST_ASSERT(!fs_core_is_connected_socket(core, connectSocket));
+		TEST_ASSERT(fs_core_is_closed_socket(core, connectSocket));
+	}
+
+	fs_core_destroy(core);
+}
+
+void
 test_core()
 {	
 	test_1();
 	test_2(SIMPLE_CONNECTION_TEST_MODE_CLIENT_CLOSE);
 	test_2(SIMPLE_CONNECTION_TEST_MODE_SERVER_CLOSE);
 	test_3();
+	test_4();
+	test_5();
 }
