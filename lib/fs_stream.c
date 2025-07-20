@@ -1,3 +1,4 @@
+#include "fs_mem.h"
 #include "fs_stream.h"
 
 fs_stream* 

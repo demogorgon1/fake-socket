@@ -1,4 +1,5 @@
 #include "fs_core.h"
+#include "fs_mem.h"
 
 fs_core*
 fs_core_create()

@@ -3,6 +3,10 @@
 
 #include "fs_base.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void		fs_init();
 void		fs_uninit();
 fs_bool		fs_is_valid_socket(
@@ -44,5 +48,9 @@ int			fs_connect(
 				int						aSocket,
 				const struct sockaddr*	aAddr,
 				socklen_t				aAddrLen);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

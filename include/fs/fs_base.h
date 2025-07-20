@@ -48,19 +48,4 @@ typedef int fs_bool;
 #define FS_STREAM_BUFFER_SIZE			2048
 #endif
 
-#define FS_NEW(_Type) (_Type*)fs_base_zalloc(sizeof(_Type))
-#define FS_NEW_ARRAY(_Type, _Count) (_Type*)fs_base_zalloc(sizeof(_Type) * _Count)
-
-static void* 
-fs_base_zalloc(	
-	size_t					aSize)
-{
-	void* p = malloc(aSize);
-	if(p == NULL)
-		abort(); // Don't want to bother with handling malloc() fails, just making everything more complex for no reason
-	
-	memset(p, 0, aSize);
-	return p;
-}
-
 #endif

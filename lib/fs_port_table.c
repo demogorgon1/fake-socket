@@ -1,3 +1,4 @@
+#include "fs_mem.h"
 #include "fs_port_table.h"
 
 fs_port_table* 
