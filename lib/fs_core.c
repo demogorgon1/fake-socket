@@ -53,7 +53,7 @@ fs_core_create_socket(
 	fs_core*				aCore,
 	int*					aOutError)
 {
-	*aOutError = 0;
+	*aOutError = 0;	
 
 	int s = -1;
 
@@ -78,7 +78,6 @@ fs_core_create_socket(
 
 	assert(aCore->m_sockets[s] == NULL);
 	aCore->m_sockets[s] = fs_socket_object_create();
-
 	return s;
 }
 
@@ -455,7 +454,7 @@ fs_core_recv(
 
 	if(socketObject->m_stream == NULL)
 	{
-		*aOutError = ENOTCONN;
+		*aOutError = EAGAIN;
 		return SIZE_MAX;
 	}
 
