@@ -1,9 +1,7 @@
 # fake-socket
 [![CMake](https://github.com/demogorgon1/fake-socket/actions/workflows/cmake-single-platform.yml/badge.svg?cache-control=no-cache)](https://github.com/demogorgon1/fake-socket/actions/workflows/cmake-single-platform.yml)
 
-_fake-socket_ is a simple C library that allows you to make "fake sockets" that function like normal Unix-style sockets, except that they only work within the same process. This library was created because I wanted to add an offline mode to a game with a server-client architecture. The game already existed and relied heavily on various microservices (and the client) communicating with each other through sockets. I found that the least intrusive way to implement this feature was to make a "drop in" socket replacement with all microservices being launched inside the client process. Obviously, I could just have continued to use normal sockets, but I'd rather avoid the risk of firewalls potentially blocking anything.
-
-The library might also be useful for testing.
+_fake-socket_ is a simple C library that allows you to make "fake sockets" that function like normal Unix-style sockets, except that they only work within the same process. This library was created because I wanted to add an offline mode to a game with a server-client architecture. The game already existed and relied heavily on various microservices (and the client) communicating with each other through sockets. I found that the least intrusive way to implement this feature was to make a "drop in" socket replacement with all microservices being launched inside the client process. Obviously, I could just have continued to use normal sockets, but I'd rather avoid the risk of firewalls potentially blocking anything. The library might also be useful for testing.
 
 ## Usage
 First of all you'll need git and cmake to acquire and build the project. Then you can run:
@@ -54,6 +52,6 @@ Things to note:
 * All sockets are non-blocking.
 * ```fs_connect()``` and ```fs_bind()``` ```sockaddr``` arguments are ignored. Loopback interface is assumed everywhere.
 * ```fs_accept()``` will always return a remote address of ```127.0.0.1```.
-* Since there is no replacement for ```select()```, you'll need to use ```fs_is_closed_socket()``` to poll whether a socket is closed or connected.
+* Since there is no replacement for ```select()```, you'll need to use ```fs_is_closed_socket()``` and ```fs_is_connected_socket()``` to poll whether a socket is closed or connected.
 * Errors are set to ```err```. ```EAGAIN``` is reported by ```fs_recv()``` and ```fs_accept()``` if a call would have blocked.
 
