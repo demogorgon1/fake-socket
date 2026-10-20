@@ -108,6 +108,11 @@ fs_core_destroy_socket(
 		if (remoteSocket != NULL)
 		{
 			remoteSocket->m_closed = FS_TRUE;
+
+			/* Socket ids are reused, so the remote socket must not refer to this one anymore. Otherwise destroying it
+			   later would close the next socket getting this id. */
+			if(remoteSocket->m_remoteSocket == aSocket)
+				remoteSocket->m_remoteSocket = -1;
 		}
 	}
 	else if(socketObject->m_remotePort != 0)

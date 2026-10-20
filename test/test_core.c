@@ -302,12 +302,70 @@ test_5()
 }
 
 void
+test_6()
+{
+	fs_core* core = fs_core_create();
+	int error = 0;
+	uint16_t remotePort = 0;
+	char recvBuffer[256];
+
+	{
+		int listenSocket = fs_core_create_socket(core, &error);
+		TEST_ASSERT(listenSocket != -1);
+		TEST_ASSERT(fs_core_bind(core, listenSocket, 12345, &error));
+		TEST_ASSERT(fs_core_listen(core, listenSocket, 32, &error));
+
+		int connectSocket1 = fs_core_create_socket(core, &error);
+		TEST_ASSERT(connectSocket1 != -1);
+		TEST_ASSERT(fs_core_connect(core, connectSocket1, 12345, &error));
+
+		int clientSocket1 = fs_core_accept(core, listenSocket, &remotePort, &error);
+		TEST_ASSERT(clientSocket1 != -1);
+
+		// Client destroys its socket and connects again before the server has destroyed its end of the first
+		// connection. The new connecting socket gets the id of the destroyed one.
+		fs_core_destroy_socket(core, connectSocket1);
+		TEST_ASSERT(fs_core_is_closed_socket(core, clientSocket1));
+
+		int connectSocket2 = fs_core_create_socket(core, &error);
+		TEST_ASSERT(connectSocket2 == connectSocket1);
+		TEST_ASSERT(fs_core_connect(core, connectSocket2, 12345, &error));
+
+		int clientSocket2 = fs_core_accept(core, listenSocket, &remotePort, &error);
+		TEST_ASSERT(clientSocket2 != -1);
+
+		// Server destroys its end of the first connection, which must not affect the second one
+		fs_core_destroy_socket(core, clientSocket1);
+
+		TEST_ASSERT(fs_core_is_connected_socket(core, connectSocket2));
+		TEST_ASSERT(!fs_core_is_closed_socket(core, connectSocket2));
+
+		TEST_ASSERT(fs_core_is_connected_socket(core, clientSocket2));
+		TEST_ASSERT(!fs_core_is_closed_socket(core, clientSocket2));
+
+		{
+			size_t bytes = fs_core_send(core, connectSocket2, "Hello", 5, &error);
+			TEST_ASSERT(bytes == 5);
+		}
+
+		{
+			size_t bytes = fs_core_recv(core, clientSocket2, recvBuffer, sizeof(recvBuffer), &error);
+			TEST_ASSERT(bytes == 5);
+			TEST_ASSERT(memcmp(recvBuffer, "Hello", 5) == 0);
+		}
+	}
+
+	fs_core_destroy(core);
+}
+
+void
 test_core()
-{	
+{
 	test_1();
 	test_2(SIMPLE_CONNECTION_TEST_MODE_CLIENT_CLOSE);
 	test_2(SIMPLE_CONNECTION_TEST_MODE_SERVER_CLOSE);
 	test_3();
 	test_4();
 	test_5();
+	test_6();
 }
